@@ -32,6 +32,7 @@ export function buildWorld(scene: THREE.Scene, root: THREE.Group) {
   buildDungeon(root);
   buildRuins(root);
   buildSanctuary(root);
+  buildLightShafts(root);
   buildPathLights(root);
   buildMist(root);
 }
@@ -150,7 +151,8 @@ function buildForest(root: THREE.Group) {
 }
 
 function buildCaveMouth(root: THREE.Group) {
-  const rockMat = new THREE.MeshStandardMaterial({ color: 0x1a2430, roughness: 0.98 });
+  const rockMat = new THREE.MeshStandardMaterial({ color: 0x263744, roughness: 0.96 });
+  const mossMat = new THREE.MeshStandardMaterial({ color: 0x31583f, roughness: 0.86 });
   for (let i = 0; i < 72; i += 1) {
     const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(2.2 + seeded(i, 16) * 5.8, 2), rockMat);
     const side = seeded(i, 17) > 0.5 ? 1 : -1;
@@ -161,12 +163,24 @@ function buildCaveMouth(root: THREE.Group) {
     root.add(rock);
   }
 
-  const arch = new THREE.Mesh(new THREE.TorusGeometry(11.8, 2.4, 18, 48, Math.PI), rockMat);
+  const arch = new THREE.Mesh(new THREE.TorusGeometry(12.6, 2.8, 20, 64, Math.PI), rockMat);
   arch.position.set(0, 6.7, -119);
   arch.rotation.z = Math.PI;
   arch.scale.y = 1.15;
   arch.castShadow = true;
   root.add(arch);
+
+  for (let i = 0; i < 24; i += 1) {
+    const vine = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.055, 5 + seeded(i, 170) * 5, 6), mossMat);
+    vine.position.set((seeded(i, 171) - 0.5) * 20, 8 - seeded(i, 172) * 3, -116 - seeded(i, 173) * 7);
+    vine.rotation.z = (seeded(i, 174) - 0.5) * 0.5;
+    vine.castShadow = true;
+    root.add(vine);
+  }
+
+  const entranceGlow = new THREE.PointLight(0x4be7ff, 8, 64);
+  entranceGlow.position.set(0, 4.5, -130);
+  root.add(entranceGlow);
 
   for (let i = 0; i < 16; i += 1) {
     addCrystalCluster(root, (seeded(i, 29) - 0.5) * 20, -100 - seeded(i, 30) * 46, 0.85 + seeded(i, 31), i);
@@ -200,9 +214,25 @@ function lookAngle(sideSign: number, variation: number) {
   return base + (variation - 0.5) * 1.7;
 }
 
+function addStoneArch(root: THREE.Group, z: number, height: number, material: THREE.Material) {
+  for (const x of [-6.2, 6.2]) {
+    const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.7, height, 10), material);
+    pillar.position.set(x, height / 2, z);
+    pillar.castShadow = true;
+    pillar.receiveShadow = true;
+    root.add(pillar);
+  }
+
+  const arch = new THREE.Mesh(new THREE.TorusGeometry(6.2, 0.42, 10, 36, Math.PI), material);
+  arch.position.set(0, height, z);
+  arch.rotation.z = Math.PI;
+  arch.castShadow = true;
+  root.add(arch);
+}
+
 function buildDungeon(root: THREE.Group) {
   const wallMat = new THREE.MeshStandardMaterial({ color: 0x172433, roughness: 0.95 });
-  const pathMat = new THREE.MeshStandardMaterial({ color: 0x29333a, roughness: 0.83 });
+  const pathMat = new THREE.MeshStandardMaterial({ color: 0x3f4649, roughness: 0.78 });
   const waterMat = new THREE.MeshPhysicalMaterial({
     color: 0x13bfe0,
     emissive: 0x086b8d,
@@ -212,7 +242,7 @@ function buildDungeon(root: THREE.Group) {
     transmission: 0.2,
   });
 
-  for (let i = 0; i < 96; i += 1) {
+  for (let i = 0; i < 110; i += 1) {
     const z = -144 - i * 2.15;
     for (const side of [-1, 1]) {
       const wall = new THREE.Mesh(new THREE.DodecahedronGeometry(4.2 + seeded(i, side) * 3.8, 2), wallMat);
@@ -230,31 +260,44 @@ function buildDungeon(root: THREE.Group) {
   ripplePlane(stream.geometry as THREE.PlaneGeometry, 0.18, 0.8);
   root.add(stream);
 
-  for (let i = 0; i < 34; i += 1) {
+  for (const x of [-5.8, 5.8]) {
+    const sideStream = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 150, 4, 70), waterMat);
+    sideStream.rotation.x = -Math.PI / 2;
+    sideStream.position.set(x, 0.06, -224);
+    ripplePlane(sideStream.geometry as THREE.PlaneGeometry, 0.1, 0.55);
+    root.add(sideStream);
+  }
+
+  for (let i = 0; i < 46; i += 1) {
     const slab = new THREE.Mesh(new THREE.BoxGeometry(3.8 + seeded(i, 150) * 2.4, 0.22, 2.0 + seeded(i, 151) * 2.2), pathMat);
-    slab.position.set((seeded(i, 152) - 0.5) * 5.8, 0.2, -146 - i * 4.8);
+    slab.position.set((seeded(i, 152) - 0.5) * 4.2, 0.2, -138 - i * 4.5);
     slab.rotation.y = (seeded(i, 153) - 0.5) * 0.28;
     slab.receiveShadow = true;
+    slab.castShadow = true;
     root.add(slab);
   }
 
-  for (let i = 0; i < 42; i += 1) {
+  for (let i = 0; i < 78; i += 1) {
     const side = seeded(i, 160) > 0.5 ? 1 : -1;
-    addCrystalCluster(root, side * (3.8 + seeded(i, 161) * 5.2), -145 - seeded(i, 162) * 180, 0.45 + seeded(i, 163) * 0.95, i + 50);
+    addCrystalCluster(root, side * (4.2 + seeded(i, 161) * 7.2), -135 - seeded(i, 162) * 200, 0.45 + seeded(i, 163) * 1.15, i + 50);
+  }
+
+  for (let i = 0; i < 12; i += 1) {
+    addStoneArch(root, -160 - i * 13.5, 6.8 + seeded(i, 230) * 2.2, wallMat);
   }
 }
 
 function buildRuins(root: THREE.Group) {
-  const stoneMat = new THREE.MeshStandardMaterial({ color: 0x5b5a50, roughness: 0.86 });
+  const stoneMat = new THREE.MeshStandardMaterial({ color: 0x6b685d, roughness: 0.84 });
   const glyphMat = new THREE.MeshStandardMaterial({
     color: 0xd6f7ff,
     emissive: 0x62e0ff,
     emissiveIntensity: 1.5,
   });
-  for (let row = 0; row < 9; row += 1) {
-    const z = -252 - row * 9.5;
-    for (const x of [-9, 9]) {
-      const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.15, 7 + seeded(row, x) * 4, 9), stoneMat);
+  for (let row = 0; row < 10; row += 1) {
+    const z = -246 - row * 9.2;
+    for (const x of [-11, -6.5, 6.5, 11]) {
+      const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.78, 6 + seeded(row, x) * 5, 12), stoneMat);
       pillar.position.set(x, pillar.geometry.parameters.height / 2, z);
       pillar.rotation.z = (seeded(row, x + 1) - 0.5) * 0.12;
       pillar.castShadow = true;
@@ -267,7 +310,11 @@ function buildRuins(root: THREE.Group) {
     }
   }
 
-  for (let i = 0; i < 26; i += 1) {
+  for (let i = 0; i < 9; i += 1) {
+    addStoneArch(root, -258 - i * 8.5, 8.8, stoneMat);
+  }
+
+  for (let i = 0; i < 44; i += 1) {
     const glyph = new THREE.Mesh(new THREE.TorusGeometry(0.45 + seeded(i, 60) * 0.8, 0.035, 6, 22), glyphMat);
     glyph.position.set((seeded(i, 61) - 0.5) * 12, 0.12, -248 - seeded(i, 62) * 84);
     glyph.rotation.x = -Math.PI / 2;
@@ -277,7 +324,7 @@ function buildRuins(root: THREE.Group) {
 }
 
 function buildSanctuary(root: THREE.Group) {
-  const cavernMat = new THREE.MeshStandardMaterial({ color: 0x18212c, roughness: 0.92 });
+  const cavernMat = new THREE.MeshStandardMaterial({ color: 0x16212d, roughness: 0.9 });
   const crystalMats = [0x63e8ff, 0x9a70ff, 0x57ffc3].map(
     (color) =>
       new THREE.MeshStandardMaterial({
@@ -294,7 +341,7 @@ function buildSanctuary(root: THREE.Group) {
   dome.rotation.x = Math.PI;
   root.add(dome);
 
-  for (let i = 0; i < 88; i += 1) {
+  for (let i = 0; i < 150; i += 1) {
     const radius = 12 + seeded(i, 72) * 42;
     const angle = seeded(i, 73) * Math.PI * 2;
     const crystal = new THREE.Mesh(
@@ -308,7 +355,7 @@ function buildSanctuary(root: THREE.Group) {
   }
 
   const lake = new THREE.Mesh(
-    new THREE.CircleGeometry(28, 72),
+    new THREE.CircleGeometry(36, 96),
     new THREE.MeshPhysicalMaterial({
       color: 0x146e85,
       emissive: 0x0b3448,
@@ -320,6 +367,35 @@ function buildSanctuary(root: THREE.Group) {
   lake.rotation.x = -Math.PI / 2;
   lake.position.set(0, 0.04, -386);
   root.add(lake);
+
+  const bridgeMat = new THREE.MeshStandardMaterial({ color: 0x4e5356, roughness: 0.72 });
+  for (let i = 0; i < 20; i += 1) {
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(5.5 + seeded(i, 280) * 2.0, 0.26, 2.4), bridgeMat);
+    slab.position.set((seeded(i, 281) - 0.5) * 1.4, 0.3, -338 - i * 3.0);
+    slab.rotation.y = (seeded(i, 282) - 0.5) * 0.12;
+    slab.castShadow = true;
+    slab.receiveShadow = true;
+    root.add(slab);
+  }
+
+  for (let i = 0; i < 8; i += 1) {
+    const fall = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.4 + seeded(i, 290) * 1.2, 24 + seeded(i, 291) * 18),
+      new THREE.MeshBasicMaterial({
+        color: 0x8fefff,
+        transparent: true,
+        opacity: 0.25,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      }),
+    );
+    const angle = seeded(i, 292) * Math.PI * 2;
+    const radius = 24 + seeded(i, 293) * 28;
+    fall.position.set(Math.cos(angle) * radius, 14, -386 + Math.sin(angle) * radius * 0.65);
+    fall.rotation.y = -angle;
+    root.add(fall);
+  }
 
   const core = new THREE.PointLight(0x92e7ff, 18, 120);
   core.position.set(0, 18, -386);
@@ -481,6 +557,31 @@ function buildPathLights(root: THREE.Group) {
     light.position.set(i % 2 === 0 ? -3.5 : 3.5, 2.4, chapters[i].z - 12);
     root.add(light);
   }
+}
+
+function buildLightShafts(root: THREE.Group) {
+  const shaftMat = new THREE.MeshBasicMaterial({
+    color: 0x9feeff,
+    transparent: true,
+    opacity: 0.14,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  const shafts = [
+    { x: -5, y: 16, z: -118, h: 28, w: 5 },
+    { x: 3, y: 18, z: -210, h: 34, w: 4 },
+    { x: -8, y: 19, z: -276, h: 32, w: 5 },
+    { x: 0, y: 26, z: -386, h: 52, w: 10 },
+    { x: 18, y: 22, z: -398, h: 38, w: 6 },
+    { x: -20, y: 21, z: -374, h: 36, w: 6 },
+  ];
+  shafts.forEach((item, index) => {
+    const shaft = new THREE.Mesh(new THREE.ConeGeometry(item.w, item.h, 32, 1, true), shaftMat);
+    shaft.position.set(item.x, item.y, item.z);
+    shaft.rotation.z = (index % 2 === 0 ? 1 : -1) * 0.08;
+    root.add(shaft);
+  });
 }
 
 export function updateLivingWorld(scene: THREE.Scene, root: THREE.Group, position: THREE.Vector3, time: number) {
