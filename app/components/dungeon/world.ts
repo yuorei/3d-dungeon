@@ -2,18 +2,20 @@ import * as THREE from "three";
 import { chapters } from "./chapters";
 
 export function buildWorld(scene: THREE.Scene, root: THREE.Group) {
-  scene.add(new THREE.HemisphereLight(0x9bdcff, 0x0b1815, 1.55));
+  scene.background = new THREE.Color(0xbfefff);
+  scene.fog = new THREE.FogExp2(0xb9efe7, 0.008);
+  scene.add(new THREE.HemisphereLight(0xdff9ff, 0x66866a, 2.25));
 
-  const moon = new THREE.DirectionalLight(0xc6e7ff, 3.2);
-  moon.position.set(-28, 44, 18);
-  moon.castShadow = true;
-  moon.shadow.mapSize.set(2048, 2048);
-  scene.add(moon);
+  const sun = new THREE.DirectionalLight(0xfff4cf, 4.4);
+  sun.position.set(-24, 48, 26);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  scene.add(sun);
 
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(210, 470, 80, 220),
     new THREE.MeshStandardMaterial({
-      color: 0x0d1718,
+      color: 0x365d43,
       roughness: 0.86,
       metalness: 0.02,
     }),
@@ -35,43 +37,83 @@ export function buildWorld(scene: THREE.Scene, root: THREE.Group) {
 }
 
 function buildForest(root: THREE.Group) {
-  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x130f0d, roughness: 0.95 });
-  const mossMat = new THREE.MeshStandardMaterial({
-    color: 0x103b32,
-    emissive: 0x031f19,
-    emissiveIntensity: 0.22,
-    roughness: 0.88,
+  const trunkMat = new THREE.MeshStandardMaterial({
+    color: 0x5a3b24,
+    roughness: 0.92,
   });
+  const barkDarkMat = new THREE.MeshStandardMaterial({
+    color: 0x2f2118,
+    roughness: 0.96,
+  });
+  const leafMats = [0x3f8a55, 0x5ea96a, 0x2f7450].map((color) => new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.82,
+  }));
   const fernMat = new THREE.MeshStandardMaterial({
-    color: 0x14604d,
-    emissive: 0x03352d,
-    emissiveIntensity: 0.35,
+    color: 0x2e8f5d,
     roughness: 0.85,
   });
-  const trunkGeo = new THREE.CylinderGeometry(0.24, 0.58, 9.8, 9);
-  const crownGeo = new THREE.IcosahedronGeometry(1.7, 2);
-  const fernGeo = new THREE.ConeGeometry(0.35, 1.9, 6);
+  const flowerMat = new THREE.MeshStandardMaterial({
+    color: 0x8ffff0,
+    emissive: 0x39d8c8,
+    emissiveIntensity: 0.8,
+    roughness: 0.4,
+  });
+  const fernGeo = new THREE.ConeGeometry(0.32, 1.45, 7);
+  const leafGeo = new THREE.IcosahedronGeometry(1, 2);
 
-  for (let i = 0; i < 118; i += 1) {
-    const z = 24 - seeded(i, 2) * 132;
+  for (let i = 0; i < 82; i += 1) {
+    const z = 24 - seeded(i, 2) * 126;
     const side = seeded(i, 3) > 0.5 ? 1 : -1;
-    const x = side * (13 + seeded(i, 4) * 46);
-    const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-    trunk.position.set(x, 4.8, z);
-    trunk.rotation.z = (seeded(i, 5) - 0.5) * 0.24;
-    trunk.scale.y = 0.85 + seeded(i, 13) * 0.45;
-    trunk.castShadow = true;
-    root.add(trunk);
+    const x = side * (9.5 + seeded(i, 4) * 38);
+    const height = 8.2 + seeded(i, 5) * 6.5;
+    const lean = new THREE.Vector3((seeded(i, 6) - 0.5) * 1.6, height, (seeded(i, 7) - 0.5) * 1.8);
+    const base = new THREE.Vector3(x, 0.1, z);
+    const top = base.clone().add(lean);
 
-    for (let j = 0; j < 3; j += 1) {
-      const crown = new THREE.Mesh(crownGeo, mossMat);
+    addTaperedBranch(root, base, top, 0.55 + seeded(i, 8) * 0.28, 0.2, trunkMat, 10);
+
+    for (let r = 0; r < 4; r += 1) {
+      const angle = seeded(i, r + 20) * Math.PI * 2;
+      const rootEnd = base.clone().add(new THREE.Vector3(Math.cos(angle) * (1.0 + seeded(i, r + 21) * 1.2), 0.18, Math.sin(angle) * (0.9 + seeded(i, r + 22))));
+      addTaperedBranch(root, base.clone().add(new THREE.Vector3(0, 0.2, 0)), rootEnd, 0.22, 0.06, barkDarkMat, 7);
+    }
+
+    for (let b = 0; b < 4; b += 1) {
+      const t = 0.48 + b * 0.1 + seeded(i, b + 30) * 0.07;
+      const start = base.clone().lerp(top, Math.min(t, 0.9));
+      const sideSign = seeded(i, b + 31) > 0.5 ? 1 : -1;
+      const branchAngle = lookAngle(sideSign, seeded(i, b + 32));
+      const length = 1.25 + seeded(i, b + 33) * 1.55;
+      const end = start.clone().add(new THREE.Vector3(Math.cos(branchAngle) * length, 0.8 + seeded(i, b + 34) * 1.2, Math.sin(branchAngle) * length));
+      addTaperedBranch(root, start, end, 0.13, 0.045, trunkMat, 8);
+
+      for (let k = 0; k < 3; k += 1) {
+        const leaf = new THREE.Mesh(leafGeo, leafMats[(i + b + k) % leafMats.length]);
+        leaf.position.set(
+          end.x + (seeded(i, b * 10 + k + 40) - 0.5) * 1.5,
+          end.y + (seeded(i, b * 10 + k + 41) - 0.4) * 0.9,
+          end.z + (seeded(i, b * 10 + k + 42) - 0.5) * 1.5,
+        );
+        leaf.scale.set(0.9 + seeded(i, b * 10 + k + 43) * 0.75, 0.42 + seeded(i, b * 10 + k + 44) * 0.3, 0.75 + seeded(i, b * 10 + k + 45) * 0.7);
+        leaf.rotation.set(seeded(i, b * 10 + k + 46) * Math.PI, seeded(i, b * 10 + k + 47) * Math.PI, seeded(i, b * 10 + k + 48) * Math.PI);
+        leaf.castShadow = true;
+        root.add(leaf);
+      }
+    }
+
+    const crownCenter = top.clone().add(new THREE.Vector3(0, -0.8, 0));
+    for (let j = 0; j < 9; j += 1) {
+      const crown = new THREE.Mesh(leafGeo, leafMats[(i + j) % leafMats.length]);
+      const angle = seeded(i, j + 80) * Math.PI * 2;
+      const radius = seeded(i, j + 81) * 2.6;
       crown.position.set(
-        x + (seeded(i, j + 80) - 0.5) * 2.4,
-        8.8 + j * 1.25 + seeded(i, j + 84) * 1.4,
-        z + (seeded(i, j + 88) - 0.5) * 2,
+        crownCenter.x + Math.cos(angle) * radius,
+        crownCenter.y + (seeded(i, j + 82) - 0.25) * 2.2,
+        crownCenter.z + Math.sin(angle) * radius,
       );
-      crown.scale.set(1.0 + seeded(i, j + 90) * 0.8, 0.42, 0.75 + seeded(i, j + 92) * 0.65);
-      crown.rotation.set(seeded(i, j + 94), seeded(i, j + 96) * Math.PI, seeded(i, j + 98));
+      crown.scale.set(1.05 + seeded(i, j + 83) * 1.05, 0.48 + seeded(i, j + 84) * 0.42, 0.85 + seeded(i, j + 85) * 1.05);
+      crown.rotation.set(seeded(i, j + 86) * Math.PI, seeded(i, j + 87) * Math.PI, seeded(i, j + 88) * Math.PI);
       crown.castShadow = true;
       root.add(crown);
     }
@@ -81,7 +123,7 @@ function buildForest(root: THREE.Group) {
     const z = 22 - seeded(i, 8) * 136;
     const side = seeded(i, 9) > 0.5 ? 1 : -1;
     const fern = new THREE.Mesh(fernGeo, fernMat);
-    fern.position.set(side * (5.2 + seeded(i, 10) * 13), 0.85, z);
+    fern.position.set(side * (4.2 + seeded(i, 10) * 12), 0.65, z);
     fern.scale.set(0.45 + seeded(i, 11) * 0.9, 0.65 + seeded(i, 12) * 1.4, 0.45 + seeded(i, 14) * 0.9);
     fern.rotation.y = seeded(i, 12) * Math.PI * 2;
     fern.castShadow = true;
@@ -89,7 +131,7 @@ function buildForest(root: THREE.Group) {
   }
 
   for (let i = 0; i < 28; i += 1) {
-    const light = new THREE.PointLight(0x42ffd4, 0.45, 9);
+    const light = new THREE.PointLight(0x7fffe2, 0.24, 7);
     light.position.set((seeded(i, 120) - 0.5) * 18, 0.75, 8 - seeded(i, 121) * 88);
     root.add(light);
   }
@@ -101,7 +143,7 @@ function buildForest(root: THREE.Group) {
     roughness: 0.35,
   });
   for (let i = 0; i < 36; i += 1) {
-    const ember = new THREE.Mesh(new THREE.SphereGeometry(0.035 + seeded(i, 124) * 0.045, 8, 8), pathGlowMat);
+    const ember = new THREE.Mesh(new THREE.SphereGeometry(0.035 + seeded(i, 124) * 0.045, 8, 8), i % 5 === 0 ? flowerMat : pathGlowMat);
     ember.position.set((seeded(i, 125) - 0.5) * 3.4, 0.12, 3 - i * 3.2);
     root.add(ember);
   }
@@ -129,6 +171,33 @@ function buildCaveMouth(root: THREE.Group) {
   for (let i = 0; i < 16; i += 1) {
     addCrystalCluster(root, (seeded(i, 29) - 0.5) * 20, -100 - seeded(i, 30) * 46, 0.85 + seeded(i, 31), i);
   }
+}
+
+function addTaperedBranch(
+  root: THREE.Group,
+  start: THREE.Vector3,
+  end: THREE.Vector3,
+  startRadius: number,
+  endRadius: number,
+  material: THREE.Material,
+  segments: number,
+) {
+  const direction = end.clone().sub(start);
+  const length = direction.length();
+  const branch = new THREE.Mesh(
+    new THREE.CylinderGeometry(endRadius, startRadius, length, segments),
+    material,
+  );
+  branch.position.copy(start).addScaledVector(direction, 0.5);
+  branch.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+  branch.castShadow = true;
+  branch.receiveShadow = true;
+  root.add(branch);
+}
+
+function lookAngle(sideSign: number, variation: number) {
+  const base = sideSign > 0 ? 0 : Math.PI;
+  return base + (variation - 0.5) * 1.7;
 }
 
 function buildDungeon(root: THREE.Group) {
@@ -416,9 +485,14 @@ function buildPathLights(root: THREE.Group) {
 
 export function updateLivingWorld(scene: THREE.Scene, root: THREE.Group, position: THREE.Vector3, time: number) {
   const deep = THREE.MathUtils.clamp((-position.z - 80) / 280, 0, 1);
+  const forestToCave = THREE.MathUtils.clamp((-position.z - 38) / 92, 0, 1);
+  const daylight = new THREE.Color(0xbfefff);
+  const caveBlue = new THREE.Color(0x071114);
+  const deepViolet = new THREE.Color(0x050716);
+  scene.background = new THREE.Color().lerpColors(daylight, caveBlue, forestToCave).lerp(deepViolet, deep);
   scene.fog = new THREE.FogExp2(
-    new THREE.Color().lerpColors(new THREE.Color(0x071114), new THREE.Color(0x050716), deep),
-    0.015 - deep * 0.006,
+    new THREE.Color().lerpColors(new THREE.Color(0xb9efe7), caveBlue, forestToCave).lerp(deepViolet, deep),
+    0.008 + forestToCave * 0.007 - deep * 0.006,
   );
   root.children.forEach((child, index) => {
     if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshStandardMaterial && child.material.emissiveIntensity > 0) {
