@@ -7,9 +7,18 @@
 
 html,
 body {
-  @apply bg-white dark:bg-gray-950;
+  @apply bg-[#03070a];
+  min-height: 100%;
 
   @media (prefers-color-scheme: dark) {
     color-scheme: dark;
   }
+}
+
+body {
+  margin: 0;
+}
+
+canvas {
+  display: block;
 }
